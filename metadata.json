@@ -1,0 +1,5 @@
+{
+  "name": "Binance Orderflow Matrix",
+  "description": "Real-time Orderflow analytics and Orderbook visualization for Binance Futures using WebSockets.",
+  "requestFramePermissions": []
+}
