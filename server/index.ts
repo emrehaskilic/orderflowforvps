@@ -429,8 +429,8 @@ wss.on('connection', (ws: WebSocket, req) => {
 // Start Server
 // ============================================================================
 
-server.listen(PORT, () => {
-    log('INFO', `Binance Proxy Server running on port ${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    log('INFO', `Binance Proxy Server running on port ${PORT} (0.0.0.0)`);
     log('INFO', `Health endpoint: http://localhost:${PORT}/health`);
     log('INFO', `Depth endpoint: http://localhost:${PORT}/api/depth/:symbol`);
     log('INFO', `WebSocket endpoint: ws://localhost:${PORT}/ws?symbols=BTCUSDT,ETHUSDT`);
