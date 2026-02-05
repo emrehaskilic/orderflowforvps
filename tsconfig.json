@@ -21,9 +21,19 @@
         "noFallthroughCasesInSwitch": true
     },
     "include": [
-        "src",
-        "**/*.ts",
-        "**/*.tsx"
+        "App.tsx",
+        "index.tsx",
+        "types.ts",
+        "components/**/*",
+        "services/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "server",
+        "**/*.test.ts",
+        "**/*.spec.ts",
+        "test_binance.js"
     ],
     "references": [
         {

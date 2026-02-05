@@ -88,28 +88,37 @@ function log(level: 'INFO' | 'WARN' | 'ERROR', message: string, data?: any) {
 // ============================================================================
 
 async function fetchBinanceDepth(symbol: string, limit: number = 1000): Promise<DepthCache | null> {
-    const url = `${BINANCE_REST_BASE}/fapi/v1/depth?symbol=${symbol}&limit=${limit}`;
+    const cleanSymbol = symbol.trim().toUpperCase();
+    const url = `${BINANCE_REST_BASE}/fapi/v1/depth?symbol=${cleanSymbol}&limit=${limit}`;
 
     try {
-        const response = await fetch(url);
+        log('INFO', `Fetching depth: ${url}`);
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+                'Content-Type': 'application/json'
+            }
+        });
 
         if (!response.ok) {
             const status = response.status;
+            const errorText = await response.text();
+
+            log('ERROR', `Binance depth fetch failed: ${status} for ${cleanSymbol}. Body: ${errorText}`);
 
             if (status === 429 || status === 418) {
                 // Rate limited - increase backoff
-                const state = rateLimitState.get(symbol) || { lastRequest: 0, backoffMs: MIN_BACKOFF_MS };
+                const state = rateLimitState.get(cleanSymbol) || { lastRequest: 0, backoffMs: MIN_BACKOFF_MS };
                 state.backoffMs = Math.min(state.backoffMs * 2, MAX_BACKOFF_MS);
-                rateLimitState.set(symbol, state);
-                log('WARN', `Rate limited (${status}) for ${symbol}, backoff: ${state.backoffMs}ms`);
+                rateLimitState.set(cleanSymbol, state);
+                log('WARN', `Rate limited (${status}) for ${cleanSymbol}, backoff: ${state.backoffMs}ms`);
                 return null;
             }
 
-            log('ERROR', `Binance depth fetch failed: ${status} for ${symbol}`);
             return null;
         }
 
-        const data = await response.json();
+        const data: any = await response.json();
 
         if (!data || !data.lastUpdateId || !Array.isArray(data.bids) || !Array.isArray(data.asks)) {
             log('ERROR', `Invalid depth data structure for ${symbol}`);
@@ -178,7 +187,14 @@ app.get('/health', (_req: Request, res: Response) => {
 // Depth snapshot endpoint
 app.get('/api/depth/:symbol', async (req: Request, res: Response) => {
     const symbol = req.params.symbol.toUpperCase();
-    const limit = Math.min(parseInt(req.query.limit as string) || 1000, 1000);
+    let limit = Math.min(parseInt(req.query.limit as string) || 1000, 1000);
+
+    // Binance Futures valid limits: 5, 10, 20, 50, 100, 500, 1000
+    const validLimits = [5, 10, 20, 50, 100, 500, 1000];
+    if (!validLimits.includes(limit)) {
+        // Map to nearest valid limit >= requested
+        limit = validLimits.find(l => l >= limit) || 1000;
+    }
 
     // Rate limit check per symbol
     const state = rateLimitState.get(symbol) || { lastRequest: 0, backoffMs: MIN_BACKOFF_MS };

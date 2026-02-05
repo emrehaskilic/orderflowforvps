@@ -127,7 +127,7 @@ export class OrderBookEngine {
             // snapshots are requested concurrently across multiple symbols.
             // Use proxy server to avoid 418/429 rate limits from Binance
             const PROXY_HTTP_BASE = (import.meta as any).env?.VITE_PROXY_HTTP || 'http://localhost:8787';
-            const response = await fetch(`${PROXY_HTTP_BASE}/api/depth/${this.symbol}?limit=200`);
+            const response = await fetch(`${PROXY_HTTP_BASE}/api/depth/${this.symbol}?limit=100`);
 
             // A) Check response.ok BEFORE any state mutation
             if (!response.ok) {
