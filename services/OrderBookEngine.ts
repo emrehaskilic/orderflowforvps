@@ -125,7 +125,9 @@ export class OrderBookEngine {
             // Use a smaller snapshot depth to reduce rate limit pressure. 200 levels is
             // sufficient for OBI calculations and reduces 418/429 errors when
             // snapshots are requested concurrently across multiple symbols.
-            const response = await fetch(`https://fapi.binance.com/fapi/v1/depth?symbol=${this.symbol}&limit=200`);
+            // Use proxy server to avoid 418/429 rate limits from Binance
+            const PROXY_HTTP_BASE = (import.meta as any).env?.VITE_PROXY_HTTP || 'http://localhost:8787';
+            const response = await fetch(`${PROXY_HTTP_BASE}/api/depth/${this.symbol}?limit=200`);
 
             // A) Check response.ok BEFORE any state mutation
             if (!response.ok) {

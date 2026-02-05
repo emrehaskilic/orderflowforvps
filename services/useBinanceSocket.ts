@@ -13,7 +13,9 @@ import {
 } from './mathUtils';
 import { OrderBookEngine } from './OrderBookEngine';
 
-const BINANCE_STREAM_URL = 'wss://fstream.binance.com/stream';
+// Use proxy server to avoid 418/429 rate limits from Binance
+const PROXY_WS_BASE = (import.meta as any).env?.VITE_PROXY_WS || 'ws://localhost:8787';
+const BINANCE_STREAM_URL = `${PROXY_WS_BASE}/ws`;
 
 // Debug config
 const DEBUG_ALL_SYMBOLS = false;
@@ -112,13 +114,9 @@ export const useBinanceSocket = (activeSymbols: string[]) => {
         // Initialize new ones
         activeSymbols.forEach(s => getTracker(s));
 
-        // Connect WS
-        const streams = activeSymbols.flatMap(s => {
-            const lower = s.toLowerCase();
-            return [`${lower}@aggTrade`, `${lower}@depth@100ms`, `${lower}@miniTicker`];
-        }).join('/');
-
-        const ws = new WebSocket(`${BINANCE_STREAM_URL}?streams=${streams}`);
+        // Connect WS - use symbols query param for proxy server
+        // The proxy server handles building the combined stream internally
+        const ws = new WebSocket(`${BINANCE_STREAM_URL}?symbols=${activeSymbols.join(',')}`);
         socketRef.current = ws;
 
         // WS health logging
@@ -137,6 +135,10 @@ export const useBinanceSocket = (activeSymbols: string[]) => {
 
         ws.onmessage = (event) => {
             const msg = JSON.parse(event.data);
+
+            // Skip proxy connection messages (e.g., { type: 'connected', ... })
+            if (!msg.data || !msg.stream) return;
+
             const symbol = msg.data.s;
             if (!symbol || !trackers.current.has(symbol)) return;
 
